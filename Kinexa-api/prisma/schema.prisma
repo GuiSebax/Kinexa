@@ -1,0 +1,272 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String @id @default(uuid())
+  email         String @unique
+  password_hash String
+  role          String
+
+  student  Student?
+  personal Personal?
+
+  @@map("users")
+}
+
+model Student {
+  id      String @id @default(uuid())
+  user_id String @unique
+
+  allow_ai_swap        Boolean
+  gender               String
+  age                  Int
+  height               Float
+  weight               Float
+  body_fat_pcl         Float
+  muscle_mass_pcl      Float
+  body_visual_ref_id   Int
+  sleep_quality        String
+  activity_level       String
+  training_experience  String
+  months_trained_total Int
+  months_inactive      Int
+  injuries_and_pains   String?
+  pathologies          String?
+  exercise_preferences String?
+  current_streak       Int
+  total_xp             Int
+
+  user         User                 @relation(fields: [user_id], references: [id])
+  personals    StudentPersonal[]
+  workoutPlans WorkoutPlan[]
+  metrics      StudentMetric[]
+  sessions     TrainingSession[]
+  achievements StudentAchievement[]
+
+  @@map("students")
+}
+
+model Personal {
+  id          String @id @default(uuid())
+  user_id     String @unique
+  invite_slug String @unique
+
+  user          User              @relation(fields: [user_id], references: [id])
+  students      StudentPersonal[]
+  subscriptions Subscription[]
+  aiUsageLogs   AiUsageLog[]
+
+  @@map("personals")
+}
+
+model StudentPersonal {
+  id          String   @id @default(uuid())
+  student_id  String
+  personal_id String
+  created_at  DateTime @default(now())
+  active      Boolean  @default(true)
+
+  student  Student  @relation(fields: [student_id], references: [id])
+  personal Personal @relation(fields: [personal_id], references: [id])
+
+  @@unique([student_id, personal_id])
+  @@map("student_personals")
+}
+
+model SubscriptionPlan {
+  id                String  @id @default(uuid())
+  name              String
+  student_limit     Int
+  ai_training_limit Int
+  allow_smart_swap  Boolean
+  price             Decimal
+  billing_cycle     String
+
+  subscriptions Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  personal_id          String
+  plan_id              String
+  status               String
+  current_period_start DateTime
+  current_period_end   DateTime
+
+  personal Personal         @relation(fields: [personal_id], references: [id])
+  plan     SubscriptionPlan @relation(fields: [plan_id], references: [id])
+
+  @@map("subscriptions")
+}
+
+model AiUsageLog {
+  id          String   @id @default(uuid())
+  personal_id String
+  action_type String
+  created_at  DateTime @default(now())
+
+  personal Personal @relation(fields: [personal_id], references: [id])
+
+  @@map("ai_usage_logs")
+}
+
+model Achievement {
+  id        String @id @default(uuid())
+  name      String
+  icon_url  String
+  xp_reward Int
+
+  students StudentAchievement[]
+
+  @@map("achievements")
+}
+
+model WorkoutPlan {
+  id                    String  @id @default(uuid())
+  student_id            String
+  goal                  String
+  location              String
+  weekly_frequency      Int
+  session_duration_mins Int
+  active                Boolean
+
+  student Student      @relation(fields: [student_id], references: [id])
+  days    WorkoutDay[]
+
+  @@map("workout_plans")
+}
+
+model StudentMetric {
+  id          String   @id @default(uuid())
+  student_id  String
+  weight      Float
+  photo_url   String?
+  notes       String?
+  recorded_at DateTime
+
+  student Student @relation(fields: [student_id], references: [id])
+
+  @@map("student_metrics")
+}
+
+model WorkoutDay {
+  id      String @id @default(uuid())
+  plan_id String
+  name    String
+  order   Int
+
+  plan      WorkoutPlan       @relation(fields: [plan_id], references: [id])
+  exercises WorkoutExercise[]
+  sessions  TrainingSession[]
+
+  @@map("workout_days")
+}
+
+model TrainingSession {
+  id               String    @id @default(uuid())
+  student_id       String
+  day_id           String
+  started_at       DateTime
+  finished_at      DateTime?
+  perceived_effort Int
+  student_notes    String?
+
+  student Student       @relation(fields: [student_id], references: [id])
+  day     WorkoutDay    @relation(fields: [day_id], references: [id])
+  logs    ExerciseLog[]
+  aiSwaps AiSwapLog[]
+
+  @@map("training_sessions")
+}
+
+model AiSwapLog {
+  id                   String @id @default(uuid())
+  session_id           String
+  original_exercise_id String
+  swapped_exercise_id  String
+  reason               String
+
+  session TrainingSession @relation(fields: [session_id], references: [id])
+
+  @@map("ai_swap_logs")
+}
+
+model StudentAchievement {
+  id             String   @id @default(uuid())
+  student_id     String
+  achievement_id String
+  earned_at      DateTime
+
+  student     Student     @relation(fields: [student_id], references: [id])
+  achievement Achievement @relation(fields: [achievement_id], references: [id])
+
+  @@map("student_achievements")
+}
+
+model Equipment {
+  id   String @id @default(uuid())
+  name String
+
+  exercises Exercise[]
+
+  @@map("equipments")
+}
+
+model Exercise {
+  id                    String  @id @default(uuid())
+  equipment_id          String
+  name                  String
+  muscle_group          String
+  biomechanical_pattern String
+  video_url             String?
+
+  equipment Equipment         @relation(fields: [equipment_id], references: [id])
+  workouts  WorkoutExercise[]
+
+  @@map("exercises")
+}
+
+model WorkoutExercise {
+  id             String @id @default(uuid())
+  day_id         String
+  exercise_id    String
+  sets           Int
+  reps_range     String
+  rest_time_secs Int
+  order          Int
+
+  day      WorkoutDay    @relation(fields: [day_id], references: [id])
+  exercise Exercise      @relation(fields: [exercise_id], references: [id])
+  logs     ExerciseLog[]
+
+  @@map("workout_exercises")
+}
+
+model ExerciseLog {
+  id                  String  @id @default(uuid())
+  session_id          String
+  workout_exercise_id String
+  set_index           Int
+  weight              Float
+  reps                Int
+  is_pr               Boolean
+
+  session         TrainingSession @relation(fields: [session_id], references: [id])
+  workoutExercise WorkoutExercise @relation(fields: [workout_exercise_id], references: [id])
+
+  @@map("exercise_logs")
+}
