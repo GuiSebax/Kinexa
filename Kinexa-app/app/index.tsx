@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View, Image, Animated } from "react-native";
 
@@ -14,7 +15,7 @@ export default function Index() {
       // Logo aparece (no centro)
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 600,
+        duration: 700,
         useNativeDriver: true,
       }),
 
@@ -22,26 +23,30 @@ export default function Index() {
       Animated.parallel([
         Animated.timing(textTranslateX, {
           toValue: 0,
-          duration: 600,
+          duration: 700,
           useNativeDriver: true,
         }),
         Animated.timing(textOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 700,
           useNativeDriver: true,
         }),
         Animated.timing(logoTranslateX, {
           toValue: -10, // empurra o K pra esquerda
-          duration: 600,
+          duration: 700,
           useNativeDriver: true,
         }),
       ]),
-    ]).start();
+    ]).start(() => {
+      setTimeout(() => {
+        router.replace('/(auth)/login' as any);
+      }, 800)
+    });
   }, []);
 
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container]}>
       <Animated.Image source={require('../assets/images/logo.png')}
         resizeMode="contain"
         style={[{ opacity, transform: [{ translateX: logoTranslateX }] }]} />
@@ -56,7 +61,7 @@ export default function Index() {
       >
         inexa
       </Animated.Text>
-    </View>
+    </Animated.View>
   );
 }
 
